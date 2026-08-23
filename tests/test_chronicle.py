@@ -263,3 +263,18 @@ def test_publication_time_is_exposed_separately_from_event_time(direct_vm, direc
     assert receipt["left_time_kind_name"] == "REPORTED_TIME"
     assert receipt["right_time_kind_name"] == "PUBLICATION_TIME"
     assert receipt["effective_relation_name"] == "SAME_WINDOW"
+
+
+def test_conclusive_relation_without_support_is_retryable(direct_vm, direct_deploy):
+    contract, timeline_id, event_ids = deploy_timeline(direct_deploy, 2)
+    contract.seal_timeline(timeline_id)
+    mock_sources(direct_vm, 2)
+    direct_vm.mock_llm(
+        r"resolving the temporal relationship",
+        {"relation": "BEFORE", "left_time_kind": "UNKNOWN", "right_time_kind": "UNKNOWN"},
+    )
+    relation_id = contract.resolve_relation(timeline_id, event_ids[0], event_ids[1])
+    receipt = contract.get_relation_receipt(relation_id)
+    assert receipt["observed_relation_name"] == "UNRESOLVED"
+    assert receipt["finalized"] is False
+    assert receipt["graph_applied"] is False

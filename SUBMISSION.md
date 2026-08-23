@@ -80,3 +80,26 @@ The repository includes GenLayer Direct Mode coverage plus dependency-free prefl
 ## Category fit
 
 Chronicle has no frontend and no application product flow. It is intentionally a standalone Intelligent Contract primitive for other builders to compose.
+
+## Deployment status
+
+No StudioNet address or transaction hash is claimed in this repository. The
+hardening environment did not expose an installed/unlocked GenLayer CLI account,
+so deployment proof remains an explicit follow-up rather than fabricated
+metadata. The source is ready for the documented deployment and lifecycle
+procedure once a real account is available.
+
+## Reviewer test plan
+
+```bash
+python scripts/preflight.py
+pip install -r requirements-dev.txt
+pytest -q tests/test_static.py
+gltest tests/test_chronicle.py -v -s
+```
+
+For the live value proof, create three events, seal the timeline, resolve A/B
+and B/C, then call `get_relation(A, C)`. The result should report
+`BEFORE` with `source = INFERRED`; no third resolution is required. The cycle
+and graph-conflict proof is kept in the Direct Mode suite so it does not require
+fabricating contradictory public evidence.

@@ -20,14 +20,8 @@ gltest tests/test_chronicle.py -v -s
 
 ```bash
 genlayer network studionet
-```
-
-or deploy explicitly:
-
-```bash
-genlayer deploy \
-  --contract contracts/chronicle.py \
-  --rpc https://studio.genlayer.com/api
+genlayer account show
+genlayer deploy --contract contracts/chronicle.py
 ```
 
 Chronicle has no constructor arguments.
@@ -44,6 +38,11 @@ commit SHA:
 ```
 
 Do not invent values. Copy them from finalized CLI/Explorer output.
+
+This checkout intentionally contains no placeholder deployment record. The
+hardening environment did not have the GenLayer CLI/account configured, so
+StudioNet values must be added only after a real deployment and finalized
+receipt.
 
 ## 5. Reviewer lifecycle
 

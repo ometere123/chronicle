@@ -247,6 +247,8 @@ gltest tests/test_chronicle.py -v -s
 
 The Direct Mode suite covers registration, ownership, source safety, sealing, permissionless resolution, relation inversion, transitive inference, cycle rejection, graph conflicts, unavailable/unresolved evidence and receipt definition-hash pinning.
 
+See [docs/WHY_CHRONICLE_IS_A_PRIMITIVE.md](docs/WHY_CHRONICLE_IS_A_PRIMITIVE.md) for the technical contribution and reviewer proof strategy.
+
 ## Deployment
 
 ```bash

@@ -85,3 +85,14 @@ def test_bounded_surface_constants_exist():
     text = source()
     for name in ("MAX_EVENTS", "MAX_SOURCES", "MAX_SOURCE_CHARS", "MAX_EVENT_DEFINITION_LEN", "MAX_EVIDENCE_LEN"):
         assert re.search(rf"^{name}\s*=", text, re.MULTILINE)
+
+
+def test_consensus_binds_source_availability_and_support():
+    text = source()
+    assert 'leader["left_available_sources"]' in text
+    assert 'follower["left_available_sources"]' in text
+    assert "INSUFFICIENT_TEMPORAL_SUPPORT" in text
+
+
+def test_primitive_strategy_document_exists():
+    assert (ROOT / "docs" / "WHY_CHRONICLE_IS_A_PRIMITIVE.md").exists()

@@ -318,6 +318,17 @@ def canonical_relation(raw, left_available: int, right_available: int) -> dict:
     if left_available == 0 or right_available == 0:
         relation = REL_UNAVAILABLE
         reason = "SOURCE_UNAVAILABLE"
+    elif is_semantically_final_relation(relation) and (
+        left_support_count < 1
+        or right_support_count < 1
+        or parse_kind(raw.get("left_time_kind", "UNKNOWN")) == TIME_UNKNOWN
+        or parse_kind(raw.get("right_time_kind", "UNKNOWN")) == TIME_UNKNOWN
+    ):
+        # A model may emit a permitted relation without actually grounding
+        # both events or identifying the temporal anchors. Preserve that
+        # observation as retryable uncertainty instead of finalizing it.
+        relation = REL_UNRESOLVED
+        reason = "INSUFFICIENT_TEMPORAL_SUPPORT"
     return {
         "relation": relation,
         "left_time_kind": parse_kind(raw.get("left_time_kind", "UNKNOWN")),
@@ -572,32 +583,55 @@ class Chronicle(gl.Contract):
         return str(timeline.timeline_hash)
 
     def _run_relation_observation(self, timeline_name: str, timeline_purpose: str, left: EventNode, right: EventNode) -> dict:
-        def fetch_sources(event: EventNode):
-            chunks: list[str] = []
-            available = 0
+        def observe() -> dict:
+            # Keep evidence fetching lexically inside the observer. This makes
+            # it explicit to GenVM's equivalence-principle analysis that every
+            # external read is repeated by validators, rather than treated as
+            # an ordinary deterministic helper call.
+            left_chunks: list[str] = []
+            left_available = 0
             index = 0
-            for source_url in event.source_urls:
+            for source_url in left.source_urls:
                 index += 1
                 url = str(source_url)
                 try:
                     response = gl.nondet.web.request(url, method="GET")
                     code = response_status(response)
                     if code >= 400:
-                        chunks.append(f"SOURCE {index} | URL: {url} | HTTP {code} | UNAVAILABLE")
+                        left_chunks.append(f"SOURCE {index} | URL: {url} | HTTP {code} | UNAVAILABLE")
                         continue
                     try:
                         body = response.body.decode("utf-8")
                     except Exception:
                         body = str(response.body)
-                    chunks.append(f"SOURCE {index} | URL: {url} | HTTP {code}\n---BEGIN UNTRUSTED SOURCE---\n{body[:MAX_SOURCE_CHARS]}\n---END UNTRUSTED SOURCE---")
-                    available += 1
+                    left_chunks.append(f"SOURCE {index} | URL: {url} | HTTP {code}\n---BEGIN UNTRUSTED SOURCE---\n{body[:MAX_SOURCE_CHARS]}\n---END UNTRUSTED SOURCE---")
+                    left_available += 1
                 except Exception as exc:
-                    chunks.append(f"SOURCE {index} | URL: {url} | UNAVAILABLE | {clean_text(str(exc))[:160]}")
-            return "\n\n".join(chunks), available
+                    left_chunks.append(f"SOURCE {index} | URL: {url} | UNAVAILABLE | {clean_text(str(exc))[:160]}")
 
-        def observe() -> dict:
-            left_text, left_available = fetch_sources(left)
-            right_text, right_available = fetch_sources(right)
+            right_chunks: list[str] = []
+            right_available = 0
+            index = 0
+            for source_url in right.source_urls:
+                index += 1
+                url = str(source_url)
+                try:
+                    response = gl.nondet.web.request(url, method="GET")
+                    code = response_status(response)
+                    if code >= 400:
+                        right_chunks.append(f"SOURCE {index} | URL: {url} | HTTP {code} | UNAVAILABLE")
+                        continue
+                    try:
+                        body = response.body.decode("utf-8")
+                    except Exception:
+                        body = str(response.body)
+                    right_chunks.append(f"SOURCE {index} | URL: {url} | HTTP {code}\n---BEGIN UNTRUSTED SOURCE---\n{body[:MAX_SOURCE_CHARS]}\n---END UNTRUSTED SOURCE---")
+                    right_available += 1
+                except Exception as exc:
+                    right_chunks.append(f"SOURCE {index} | URL: {url} | UNAVAILABLE | {clean_text(str(exc))[:160]}")
+
+            left_text = "\n\n".join(left_chunks)
+            right_text = "\n\n".join(right_chunks)
             if left_available == 0 or right_available == 0:
                 return canonical_relation({"relation":"UNAVAILABLE","left_time_kind":"UNKNOWN","right_time_kind":"UNKNOWN","left_support_count":0,"right_support_count":0,"reason_code":"SOURCE_UNAVAILABLE","evidence":"At least one event has no reachable evidence source."}, left_available, right_available)
             try:
@@ -615,6 +649,14 @@ class Chronicle(gl.Contract):
                 if not valid_relation_shape(leader) or not valid_relation_shape(follower):
                     return False
                 if int(leader["relation"]) != int(follower["relation"]):
+                    return False
+                # Availability is part of the evidence boundary, not a
+                # cosmetic model field. A leader must not be able to claim
+                # that a source was reachable when the validator could not
+                # independently reach it (or vice versa).
+                if int(leader["left_available_sources"]) != int(follower["left_available_sources"]):
+                    return False
+                if int(leader["right_available_sources"]) != int(follower["right_available_sources"]):
                     return False
                 if is_semantically_final_relation(int(leader["relation"])):
                     if int(leader["left_support_count"]) < 1 or int(leader["right_support_count"]) < 1:
