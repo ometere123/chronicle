@@ -755,7 +755,9 @@ class Chronicle(gl.Contract):
             self.pair_finalized[pair_key] = True
         if effective == REL_GRAPH_CONFLICT:
             GraphConflictDetected(relation_id, timeline_id, left_event_id=left_id, right_event_id=right_id, observed_relation=relation_name(observed)).emit()
-        RelationResolved(relation_id, timeline_id, u8(effective), left_event_id=left_id, right_event_id=right_id, observed_relation=relation_name(observed), effective_relation=relation_name(effective), finalized=finalized).emit()
+        # `effective_relation` is the indexed constructor field; it must not
+        # also be duplicated in the event blob.
+        RelationResolved(relation_id, timeline_id, u8(effective), left_event_id=left_id, right_event_id=right_id, observed_relation=relation_name(observed), finalized=finalized).emit()
         return relation_id
 
     @gl.public.view
