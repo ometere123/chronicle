@@ -1,6 +1,7 @@
 import json
 
 
+
 PURPOSE = (
     "Establish a reusable partial order between public events while keeping "
     "publication time distinct from event time."
@@ -36,6 +37,9 @@ def mock_sources(direct_vm, count=3):
 
 
 def mock_relation(direct_vm, relation="BEFORE", left_kind="EVENT_TIME", right_kind="EVENT_TIME"):
+    # genlayer-test matches the first LLM mock; replace prior relation mocks
+    # while preserving the registered web evidence mocks.
+    direct_vm._llm_mocks.clear()
     direct_vm.mock_llm(
         r"resolving the temporal relationship",
         {
@@ -200,6 +204,60 @@ def test_overlap_cannot_override_existing_strict_order(direct_vm, direct_deploy)
     mock_relation(direct_vm, "OVERLAPS")
     relation_id = contract.resolve_relation(timeline_id, event_ids[0], event_ids[2])
     assert contract.get_relation_receipt(relation_id)["effective_relation_name"] == "GRAPH_CONFLICT"
+
+
+def test_strict_edge_cannot_create_transitive_overlap_contradiction(direct_vm, direct_deploy):
+    contract, timeline_id, event_ids = deploy_timeline(direct_deploy, 3)
+    contract.seal_timeline(timeline_id)
+    mock_sources(direct_vm, 3)
+    mock_relation(direct_vm, "OVERLAPS")
+    overlap_id = contract.resolve_relation(timeline_id, event_ids[0], event_ids[2])
+    assert contract.get_relation_receipt(overlap_id)["effective_relation_name"] == "OVERLAPS"
+    mock_relation(direct_vm, "BEFORE")
+    contract.resolve_relation(timeline_id, event_ids[0], event_ids[1])
+    conflict_id = contract.resolve_relation(timeline_id, event_ids[1], event_ids[2])
+    conflict = contract.get_relation_receipt(conflict_id)
+    assert conflict["effective_relation_name"] == "GRAPH_CONFLICT"
+    assert conflict["graph_applied"] is False
+    assert contract.is_before(timeline_id, event_ids[0], event_ids[2]) is False
+
+
+def test_strict_edge_cannot_create_transitive_same_window_contradiction(direct_vm, direct_deploy):
+    contract, timeline_id, event_ids = deploy_timeline(direct_deploy, 3)
+    contract.seal_timeline(timeline_id)
+    mock_sources(direct_vm, 3)
+    mock_relation(direct_vm, "SAME_WINDOW")
+    contract.resolve_relation(timeline_id, event_ids[0], event_ids[2])
+    mock_relation(direct_vm, "BEFORE")
+    contract.resolve_relation(timeline_id, event_ids[0], event_ids[1])
+    conflict_id = contract.resolve_relation(timeline_id, event_ids[1], event_ids[2])
+    assert contract.get_relation_receipt(conflict_id)["effective_relation_name"] == "GRAPH_CONFLICT"
+    assert contract.is_before(timeline_id, event_ids[0], event_ids[2]) is False
+
+
+def test_canonical_relation_binds_support_before_finality_checks(direct_vm, direct_deploy):
+    contract, timeline_id, event_ids = deploy_timeline(direct_deploy, 2)
+    contract.seal_timeline(timeline_id)
+    mock_sources(direct_vm, 2)
+    mock_relation(direct_vm, "BEFORE")
+    relation_id = contract.resolve_relation(timeline_id, event_ids[0], event_ids[1])
+    receipt = contract.get_relation_receipt(relation_id)
+    assert receipt["effective_relation_name"] == "BEFORE"
+    assert receipt["left_support_count"] == 1
+    assert receipt["right_support_count"] == 1
+
+
+def test_canonical_relation_safely_bounds_invalid_support_and_unknown_time(direct_vm, direct_deploy):
+    contract, timeline_id, event_ids = deploy_timeline(direct_deploy, 2)
+    contract.seal_timeline(timeline_id)
+    mock_sources(direct_vm, 2)
+    direct_vm._llm_mocks.clear()
+    direct_vm.mock_llm(r"resolving the temporal relationship", {"relation":"BEFORE", "left_time_kind":"UNKNOWN", "right_time_kind":"EVENT_TIME", "left_support_count":99, "right_support_count":True})
+    relation_id = contract.resolve_relation(timeline_id, event_ids[0], event_ids[1])
+    receipt = contract.get_relation_receipt(relation_id)
+    assert receipt["effective_relation_name"] == "UNRESOLVED"
+    assert receipt["left_support_count"] == 1
+    assert receipt["right_support_count"] == 0
 
 
 def test_unavailable_evidence_does_not_finalize_pair(direct_vm, direct_deploy):

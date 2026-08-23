@@ -321,6 +321,10 @@ def canonical_relation(raw, left_available: int, right_available: int) -> dict:
             return 0
         return max(0, min(parsed, maximum))
 
+    left_available = max(0, min(int(left_available), MAX_SOURCES))
+    right_available = max(0, min(int(right_available), MAX_SOURCES))
+    left_support_count = bounded_count(raw.get("left_support_count", 0), left_available)
+    right_support_count = bounded_count(raw.get("right_support_count", 0), right_available)
     reason = clean_text(str(raw.get("reason_code", "UNSPECIFIED"))).upper()[:MAX_REASON_CODE_LEN]
     if left_available == 0 or right_available == 0:
         relation = REL_UNAVAILABLE
@@ -342,8 +346,8 @@ def canonical_relation(raw, left_available: int, right_available: int) -> dict:
         "right_time_kind": parse_kind(raw.get("right_time_kind", "UNKNOWN")),
         "left_available_sources": int(left_available),
         "right_available_sources": int(right_available),
-        "left_support_count": bounded_count(raw.get("left_support_count", 0), left_available),
-        "right_support_count": bounded_count(raw.get("right_support_count", 0), right_available),
+        "left_support_count": left_support_count,
+        "right_support_count": right_support_count,
         "reason_code": reason if reason else "UNSPECIFIED",
         "evidence": clean_text(str(raw.get("evidence", "")))[:MAX_EVIDENCE_LEN],
         "left_anchor": clean_text(str(raw.get("left_anchor", "")))[:MAX_ANCHOR_LEN],
@@ -491,6 +495,32 @@ class Chronicle(gl.Contract):
                         return True
                     if candidate not in visited:
                         stack.append(candidate)
+        return False
+
+    def _has_finalized_nonstrict_pair(self, timeline_id: u256, event_a: int, event_b: int) -> bool:
+        pair_key = self._pair_key(timeline_id, u256(event_a), u256(event_b))
+        latest_id = self.pair_latest.get(pair_key)
+        if latest_id is None or int(latest_id) == 0:
+            return False
+        receipt = self.relations.get(latest_id)
+        if receipt is None or not bool(receipt.finalized):
+            return False
+        return int(receipt.effective_relation) in (REL_OVERLAPS, REL_SAME_WINDOW)
+
+    def _strict_edge_conflicts_with_nonstrict(self, timeline_id: u256, timeline: Timeline, from_event: u256, to_event: u256) -> bool:
+        """Check every new reachability consequence before mutating the DAG."""
+        nodes = [int(event_id) for event_id in timeline.event_ids]
+        predecessors: list[int] = []
+        successors: list[int] = []
+        for node in nodes:
+            if node == int(from_event) or self._has_before_path_id(timeline_id, timeline, u256(node), from_event):
+                predecessors.append(node)
+            if node == int(to_event) or self._has_before_path_id(timeline_id, timeline, to_event, u256(node)):
+                successors.append(node)
+        for predecessor in predecessors:
+            for successor in successors:
+                if predecessor != successor and self._has_finalized_nonstrict_pair(timeline_id, predecessor, successor):
+                    return True
         return False
 
     def _find_before_path(self, timeline_id: u256, timeline: Timeline, start: u256, target: u256) -> list[int]:
@@ -707,13 +737,13 @@ class Chronicle(gl.Contract):
         graph_applied = False
         finalized = False
         if observed == REL_BEFORE:
-            if self._has_before_path_id(timeline_id, timeline, right_id, left_id):
+            if self._has_before_path_id(timeline_id, timeline, right_id, left_id) or self._strict_edge_conflicts_with_nonstrict(timeline_id, timeline, left_id, right_id):
                 effective, finalized = REL_GRAPH_CONFLICT, True
             else:
                 self.before_edges[self._edge_key(timeline_id, left_id, right_id)] = True
                 graph_applied, finalized = True, True
         elif observed == REL_AFTER:
-            if self._has_before_path_id(timeline_id, timeline, left_id, right_id):
+            if self._has_before_path_id(timeline_id, timeline, left_id, right_id) or self._strict_edge_conflicts_with_nonstrict(timeline_id, timeline, right_id, left_id):
                 effective, finalized = REL_GRAPH_CONFLICT, True
             else:
                 self.before_edges[self._edge_key(timeline_id, right_id, left_id)] = True
@@ -784,26 +814,27 @@ class Chronicle(gl.Contract):
         if int(event_a_obj.timeline_id) != int(timeline_id) or int(event_b_obj.timeline_id) != int(timeline_id):
             raise gl.vm.UserError(f"{ERR_EXPECTED}: both events must belong to the timeline")
         if int(event_a) == int(event_b):
-            return {"relation":REL_SAME_WINDOW,"relation_name":"SAME_EVENT","source":"IDENTITY","relation_id":0,"finalized":True}
+            return {"relation":REL_SAME_WINDOW,"relation_name":"SAME_EVENT","source":"IDENTITY","relation_id":0,"finalized":True,"graph_relation":REL_SAME_WINDOW,"graph_relation_name":"SAME_EVENT","direct_relation":REL_SAME_WINDOW,"direct_relation_name":"SAME_EVENT","has_conflict":False}
         pair_key = self._pair_key(timeline_id, event_a, event_b)
         latest_id = self.pair_latest.get(pair_key)
         if latest_id is None:
             latest_id = u256(0)
-        if int(latest_id) != 0:
-            receipt = self.relations.get(latest_id)
-            if receipt is not None and bool(receipt.finalized):
-                oriented = self._relation_for_orientation(int(receipt.effective_relation), int(receipt.left_event_id), int(event_a))
-                return {"relation":oriented,"relation_name":relation_name(oriented),"source":"DIRECT","relation_id":int(latest_id),"finalized":True}
-        if self._has_before_path_id(timeline_id, timeline, event_a, event_b):
-            return {"relation":REL_BEFORE,"relation_name":"BEFORE","source":"INFERRED","relation_id":int(latest_id),"finalized":False}
-        if self._has_before_path_id(timeline_id, timeline, event_b, event_a):
-            return {"relation":REL_AFTER,"relation_name":"AFTER","source":"INFERRED","relation_id":int(latest_id),"finalized":False}
+        direct_relation = REL_UNRESOLVED
+        direct_relation_name = "UNRESOLVED"
+        direct_finalized = False
         if int(latest_id) != 0:
             receipt = self.relations.get(latest_id)
             if receipt is not None:
-                oriented = self._relation_for_orientation(int(receipt.effective_relation), int(receipt.left_event_id), int(event_a))
-                return {"relation":oriented,"relation_name":relation_name(oriented),"source":"LATEST_ATTEMPT","relation_id":int(latest_id),"finalized":False}
-        return {"relation":REL_UNRESOLVED,"relation_name":"UNRESOLVED","source":"NONE","relation_id":0,"finalized":False}
+                direct_relation = self._relation_for_orientation(int(receipt.effective_relation), int(receipt.left_event_id), int(event_a))
+                direct_relation_name = relation_name(direct_relation)
+                direct_finalized = bool(receipt.finalized)
+        if self._has_before_path_id(timeline_id, timeline, event_a, event_b):
+            return {"relation":REL_BEFORE,"relation_name":"BEFORE","source":"DIRECT" if direct_finalized and direct_relation == REL_BEFORE else "INFERRED","relation_id":int(latest_id),"finalized":direct_finalized,"graph_relation":REL_BEFORE,"graph_relation_name":"BEFORE","direct_relation":direct_relation,"direct_relation_name":direct_relation_name,"has_conflict":direct_relation == REL_GRAPH_CONFLICT}
+        if self._has_before_path_id(timeline_id, timeline, event_b, event_a):
+            return {"relation":REL_AFTER,"relation_name":"AFTER","source":"DIRECT" if direct_finalized and direct_relation == REL_AFTER else "INFERRED","relation_id":int(latest_id),"finalized":direct_finalized,"graph_relation":REL_AFTER,"graph_relation_name":"AFTER","direct_relation":direct_relation,"direct_relation_name":direct_relation_name,"has_conflict":direct_relation == REL_GRAPH_CONFLICT}
+        if int(latest_id) != 0:
+            return {"relation":direct_relation,"relation_name":direct_relation_name,"source":"DIRECT" if direct_finalized else "LATEST_ATTEMPT","relation_id":int(latest_id),"finalized":direct_finalized,"graph_relation":REL_UNRESOLVED,"graph_relation_name":"UNRESOLVED","direct_relation":direct_relation,"direct_relation_name":direct_relation_name,"has_conflict":direct_relation == REL_GRAPH_CONFLICT}
+        return {"relation":REL_UNRESOLVED,"relation_name":"UNRESOLVED","source":"NONE","relation_id":0,"finalized":False,"graph_relation":REL_UNRESOLVED,"graph_relation_name":"UNRESOLVED","direct_relation":REL_UNRESOLVED,"direct_relation_name":"UNRESOLVED","has_conflict":False}
 
     @gl.public.view
     def is_before(self, timeline_id: u256, event_a: u256, event_b: u256) -> bool:
