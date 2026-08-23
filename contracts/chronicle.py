@@ -220,10 +220,17 @@ def response_status(response) -> int:
 
 
 def parse_sources_json(text: str) -> list[str]:
-    try:
-        parsed = json.loads(str(text))
-    except Exception as exc:
-        raise ValueError("sources_json must be valid JSON") from exc
+    # The public ABI documents a JSON string for compatibility with scripts.
+    # Current GenLayer CLI versions parse a JSON-looking --args token into a
+    # native array before encoding calldata, so accept that equivalent value
+    # too. Both paths are normalized into the same frozen source list/hash.
+    if isinstance(text, list):
+        parsed = text
+    else:
+        try:
+            parsed = json.loads(str(text))
+        except Exception as exc:
+            raise ValueError("sources_json must be valid JSON") from exc
     if not isinstance(parsed, list):
         raise ValueError("sources_json must be a JSON array")
     if len(parsed) < 1 or len(parsed) > MAX_SOURCES:

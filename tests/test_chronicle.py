@@ -90,6 +90,18 @@ def test_rejects_duplicate_sources(direct_vm, direct_deploy):
         )
 
 
+def test_accepts_cli_native_source_array(direct_deploy):
+    contract = direct_deploy("contracts/chronicle.py")
+    timeline_id = contract.create_timeline("CLI sources", PURPOSE)
+    event_id = contract.add_event(
+        timeline_id,
+        "native array",
+        "source list supplied by the current GenLayer CLI",
+        ["https://evidence.example/item"],
+    )
+    assert contract.get_event(event_id)["sources"] == ["https://evidence.example/item"]
+
+
 def test_only_owner_can_add_events(direct_vm, direct_deploy, direct_alice):
     contract = direct_deploy("contracts/chronicle.py")
     timeline_id = contract.create_timeline("owner control", PURPOSE)
