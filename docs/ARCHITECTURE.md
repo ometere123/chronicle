@@ -58,10 +58,9 @@ Before adding `A -> B`, Chronicle checks whether `B -> ... -> A` already exists.
 `graph_relation_name` with `graph_finalized` for deterministic chronology; use
 `direct_relation_name` with `direct_finalized` to audit the exact pair attempt.
 An inferred relation therefore has graph finality without direct pair finality.
-Chronicle intentionally does not expose a separate `latest_attempt_id` view;
-the stable `get_relation` response already reports the latest relation ID, and
-for an inferred pair its zero ID is the direct-proof signal that no attempt is
-stored.
+`latest_attempt_id` is exposed on Chronicle for proof and diagnostics, but it is
+intentionally omitted from the minimal `IChronicle` consumer interface because
+`get_relation` already reports the latest relation ID for ordinary composition.
 
 Before inserting a strict edge `X -> Y`, Chronicle evaluates every possible new
 reachability consequence in `predecessors(X) × successors(Y)`. If any implied
