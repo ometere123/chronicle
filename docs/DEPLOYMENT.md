@@ -26,23 +26,23 @@ genlayer deploy --contract contracts/chronicle.py
 
 Chronicle has no constructor arguments.
 
-## 4. Record real deployment proof
+## 4. Verified deployment
 
-After a finalized deployment, record:
+The final source commit is `f294ebf2934140d4e7718e8712097db62818ddf0` and the
+contract source SHA-256 is
+`FADC2F7AA214973C1F9D3C1C26F866B092D9938CCF55D95C1A4CFDFBDB2B67D7`.
 
 ```text
-contract address:
-deploy transaction:
-network:
-commit SHA:
+network: studionet
+contract: 0xa225F86B51ECE63b2d41A8856C33b6366cA1f344
+deployment tx: 0x378c703e73afa88f991ad3ecd209d5da039f6a92cc96e9182538abb3fdc84cf4
+deployer: 0xB5EcD6dDa36B370aca4af5E2005d8E2Ae89c6db2
+status: FINALIZED / SUCCESS
+timeline: 1
+timeline hash: b515c110bb1ec6754c9ec218293d4c12782d99dcbd2d15d978cd6247858c60cf
 ```
 
-Do not invent values. Copy them from finalized CLI/Explorer output.
-
-This checkout intentionally contains no placeholder deployment record. The
-hardening environment did not have the GenLayer CLI/account configured, so
-StudioNet values must be added only after a real deployment and finalized
-receipt.
+The complete transaction and relation record is `proof/studionet.json`.
 
 ## 5. Reviewer lifecycle
 
@@ -60,6 +60,10 @@ Use two or three public sources with an unambiguous chronology:
 10. `get_before_path(A, C)`
 
 The important proof is that step 9 requires no additional semantic resolution.
+
+The recorded proof has A/B relation ID 1 and B/C relation ID 2, both
+`BEFORE` / `DIRECT`; A/C is `BEFORE` / `INFERRED`, C/A is `AFTER` /
+`INFERRED`, and the path is `[1, 2, 3]`.
 
 ## 6. Adversarial proof
 

@@ -40,7 +40,7 @@ Chronicle does not custody funds. Its security asset is the integrity of shared 
 
 ## Overlap contradicts strict order
 
-**Control:** `OVERLAPS` and `SAME_WINDOW` become `GRAPH_CONFLICT` when the graph already implies strict order in either direction.
+**Control:** `OVERLAPS` and `SAME_WINDOW` become `GRAPH_CONFLICT` when the graph already implies strict order in either direction. Conversely, before a strict candidate edge is written, Chronicle checks all `predecessors(X) × successors(Y)` consequences against finalized non-strict receipts, so a non-strict-first ordering cannot later be contradicted transitively.
 
 ## Temporary outage becomes a semantic decision
 

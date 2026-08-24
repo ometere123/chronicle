@@ -6,6 +6,25 @@ Chronicle is a standalone reusable Intelligent Contract that resolves temporal r
 
 There is **no frontend and no backend**. Chronicle is intentionally a contract primitive for the Intelligent Contracts category.
 
+## Verified StudioNet proof
+
+Source commit `f294ebf2934140d4e7718e8712097db62818ddf0` is deployed at
+`0xa225F86B51ECE63b2d41A8856C33b6366cA1f344`. Deployment transaction:
+`0x378c703e73afa88f991ad3ecd209d5da039f6a92cc96e9182538abb3fdc84cf4`.
+Direct Mode behavioral coverage is **42 passed**.
+
+The live proof establishes `A BEFORE B` and `B BEFORE C` as direct consensus
+relations, then returns `A BEFORE C` and `C AFTER A` by deterministic inference,
+with path `[1, 2, 3]` and no A/C semantic resolution. See
+[proof/studionet.json](proof/studionet.json).
+
+```text
+A < B
+B < C
+-----
+A < C    (inferred; no third web/LLM call)
+```
+
 ## Problem
 
 Many settlement rules depend not only on whether facts are true, but on **ordering**:
@@ -263,7 +282,8 @@ Or explicitly:
 genlayer deploy --contract contracts/chronicle.py --rpc https://studio.genlayer.com/api
 ```
 
-Chronicle has no constructor arguments. Record the final address, deployment transaction, network and commit SHA in `docs/DEPLOYMENT.md` after a real finalized deployment. Never invent deployment proof.
+Chronicle has no constructor arguments. The verified deployment record and
+reproducible lifecycle are in `docs/DEPLOYMENT.md`.
 
 ## Repository layout
 

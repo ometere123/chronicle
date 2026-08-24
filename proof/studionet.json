@@ -1,0 +1,35 @@
+{
+  "network": "studionet",
+  "contract_address": "0xa225F86B51ECE63b2d41A8856C33b6366cA1f344",
+  "deployment_tx": "0x378c703e73afa88f991ad3ecd209d5da039f6a92cc96e9182538abb3fdc84cf4",
+  "deployer": "0xB5EcD6dDa36B370aca4af5E2005d8E2Ae89c6db2",
+  "deployed_source_commit": "f294ebf2934140d4e7718e8712097db62818ddf0",
+  "contract_source_sha256": "FADC2F7AA214973C1F9D3C1C26F866B092D9938CCF55D95C1A4CFDFBDB2B67D7",
+  "deployment_status": "FINALIZED_SUCCESS",
+  "timeline_id": 1,
+  "timeline_hash": "b515c110bb1ec6754c9ec218293d4c12782d99dcbd2d15d978cd6247858c60cf",
+  "events": {
+    "A": {"id": 1, "label": "PerseveranceLanding", "definition_hash": "0d0a5aa22f13d445e7ce19105a093f3d41fe64039c19867fde71f46b53b8d805", "sources": ["https://mars.nasa.gov/mars2020/mission/status/"]},
+    "B": {"id": 2, "label": "WebbLaunch", "definition_hash": "69f65617ec5a5948200e8c835ecaf23585c0230e255b12a458730da1315eb441", "sources": ["https://science.nasa.gov/mission/webb/"]},
+    "C": {"id": 3, "label": "ArtemisILaunch", "definition_hash": "58f6b08e94dbc4d53bc5a83c18dd76a833d72cd83c00a046dad1fcd897c475a5", "sources": ["https://www.nasa.gov/mission/artemis-i/"]}
+  },
+  "transactions": {
+    "create_timeline": "0x0e4543deef4b6f5429a97622f497e3b229ee23212d464528b7f606fe71884c13",
+    "add_event_a": "0x19115aeaa0b7cc507c34362c7e1d738c4388da2ffb1720816e7bd1937842ad0f",
+    "add_event_b": "0xefdf530af6373462d04c2fac833e2e232bc3f8f2af1863aba4da3db74c4cf909",
+    "add_event_c": "0x96983852b687dc235169630f38bbff0ddf050f73aa4f73e9c61c30c161e48057",
+    "seal": "0x44270e9fac74a50eb6d511a3e198e376dcd36099192561dec9687d446b563179",
+    "resolve_ab": "0xe741ec4014e3ac6379997cf2232f98388cd66ea914424e0e28a1d010ca3cbca2",
+    "resolve_bc": "0x2a7c2392a222618dc31721ea368ee970a71c99a037bde1ad50a8dc0963df0a98"
+  },
+  "relations": {
+    "A_B": {"relation": "BEFORE", "source": "DIRECT", "relation_id": 1, "graph_finalized": true, "direct_finalized": true},
+    "B_C": {"relation": "BEFORE", "source": "DIRECT", "relation_id": 2, "graph_finalized": true, "direct_finalized": true},
+    "A_C": {"relation": "BEFORE", "source": "INFERRED", "graph_finalized": true, "direct_finalized": false},
+    "C_A": {"relation": "AFTER", "source": "INFERRED", "graph_finalized": true, "direct_finalized": false}
+  },
+  "before_path_A_C": [1, 2, 3],
+  "is_before_A_C": true,
+  "resolved_A_C": false,
+  "proof_created_at": "2026-08-24"
+}

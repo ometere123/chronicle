@@ -17,7 +17,12 @@ Validators compare state-changing fields, not just output format:
 - `relation`;
 - `left_time_kind`;
 - `right_time_kind`;
+- normalized `left_support_count` and `right_support_count`;
 - non-zero supporting evidence on both sides for conclusive relations.
+
+`reason_code`, `evidence`, `left_anchor` and `right_anchor` are bounded leader
+explanatory metadata. They are persisted for auditability but are not compared
+as arbitrary prose by validators.
 
 ## State machine
 
@@ -49,6 +54,8 @@ future consumers can derive `A < C` with no additional AI or web call. Shared st
 - only strict BEFORE edges enter the graph;
 - a new edge is rejected if it would create a cycle;
 - OVERLAPS/SAME_WINDOW cannot overwrite an already implied strict ordering;
+- candidate strict edges are checked across `predecessors(X) × successors(Y)`
+  against finalized OVERLAPS/SAME_WINDOW pairs before graph mutation;
 - final pair results cannot be overwritten;
 - every receipt pins its timeline and both event hashes.
 
@@ -75,7 +82,7 @@ Potential consumers include insurance, governance, SLA enforcement, supply chain
 
 ## Testing
 
-The repository includes GenLayer Direct Mode coverage plus dependency-free preflight/static checks. Adversarial cases cover cycle attempts, overlap-vs-order conflicts, unavailable evidence, immutable definitions and receipt hash pinning.
+The repository includes GenLayer Direct Mode coverage plus dependency-free preflight/static checks. The current behavioral suite has 42 passing tests, including retry lifecycles, prompt-injection-like source text, four-node cycles, overlap-vs-order conflicts, unavailable evidence, immutable definitions and receipt hash pinning.
 
 ## Category fit
 
@@ -83,11 +90,15 @@ Chronicle has no frontend and no application product flow. It is intentionally a
 
 ## Deployment status
 
-No StudioNet address or transaction hash is claimed in this repository. The
-hardening environment did not expose an installed/unlocked GenLayer CLI account,
-so deployment proof remains an explicit follow-up rather than fabricated
-metadata. The source is ready for the documented deployment and lifecycle
-procedure once a real account is available.
+Final verified StudioNet deployment:
+
+- contract: `0xa225F86B51ECE63b2d41A8856C33b6366cA1f344`;
+- deployment transaction: `0x378c703e73afa88f991ad3ecd209d5da039f6a92cc96e9182538abb3fdc84cf4`;
+- deployer: `0xB5EcD6dDa36B370aca4af5E2005d8E2Ae89c6db2`;
+- deployed source commit: `f294ebf2934140d4e7718e8712097db62818ddf0`;
+- status: FINALIZED / SUCCESS.
+
+The machine-readable lifecycle is in `proof/studionet.json`.
 
 ## Reviewer test plan
 

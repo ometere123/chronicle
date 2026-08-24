@@ -54,6 +54,17 @@ Before adding `A -> B`, Chronicle checks whether `B -> ... -> A` already exists.
 
 `is_before` and `get_before_path` query only the deterministic graph, allowing downstream contracts to consume established chronology without invoking consensus again.
 
+`get_relation` separates graph truth from direct-observation truth. Use
+`graph_relation_name` with `graph_finalized` for deterministic chronology; use
+`direct_relation_name` with `direct_finalized` to audit the exact pair attempt.
+An inferred relation therefore has graph finality without direct pair finality.
+
+Before inserting a strict edge `X -> Y`, Chronicle evaluates every possible new
+reachability consequence in `predecessors(X) × successors(Y)`. If any implied
+pair has a finalized direct `OVERLAPS` or `SAME_WINDOW` receipt, the candidate
+is recorded as `GRAPH_CONFLICT` without mutating the DAG. This closes both
+strict-then-nonstrict and nonstrict-then-transitive-strict orderings.
+
 ## Bounded complexity
 
 `MAX_EVENTS = 16` bounds graph traversal. At this scale straightforward traversal keeps writes small, makes invariants easy to audit and avoids maintaining a larger transitive-closure matrix.
