@@ -1,4 +1,4 @@
-"""Dependency-free verification of the committed StudioNet proof artifact."""
+"""Offline verification of the committed StudioNet proof artifact."""
 
 import json
 from pathlib import Path
