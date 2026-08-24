@@ -44,6 +44,17 @@ timeline hash: b515c110bb1ec6754c9ec218293d4c12782d99dcbd2d15d978cd6247858c60cf
 
 The complete transaction and relation record is `proof/studionet.json`.
 
+Verification recorded in `proof/verification.json`:
+
+- preflight: 30/30;
+- static tests: 12 passed;
+- Direct Mode: 35 collected and 35 passed;
+- GenVM lint/validation: PASS, 12 methods;
+- local proof hash verification: PASS.
+
+Run `python scripts/verify_proof.py` to recompute the Keccak-256 event and
+timeline hashes without a live network connection.
+
 ## 5. Reviewer lifecycle
 
 Use two or three public sources with an unambiguous chronology:

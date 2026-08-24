@@ -106,6 +106,10 @@ def test_accepts_cli_native_source_array(direct_deploy):
     assert contract.get_event(event_id)["sources"] == ["https://evidence.example/item"]
 
 
+def relation_result(relation="BEFORE", left_kind="EVENT_TIME", right_kind="EVENT_TIME", left_available=1, right_available=1, left_support=1, right_support=1):
+    return {"relation": {"BEFORE": 1, "AFTER": 2, "OVERLAPS": 3, "SAME_WINDOW": 4, "UNRESOLVED": 5, "UNAVAILABLE": 6, "EVIDENCE_CONFLICT": 7}[relation], "left_time_kind": {"EVENT_TIME": 1, "PUBLICATION_TIME": 2, "REPORTED_TIME": 3, "OBSERVED_TIME": 4, "UNKNOWN": 5}[left_kind], "right_time_kind": {"EVENT_TIME": 1, "PUBLICATION_TIME": 2, "REPORTED_TIME": 3, "OBSERVED_TIME": 4, "UNKNOWN": 5}[right_kind], "left_available_sources": left_available, "right_available_sources": right_available, "left_support_count": left_support, "right_support_count": right_support, "left_anchor": "2026-08-21", "right_anchor": "2026-08-22", "reason_code": "TEST", "evidence": "test"}
+
+
 def test_only_owner_can_add_events(direct_vm, direct_deploy, direct_alice):
     contract = direct_deploy("contracts/chronicle.py")
     timeline_id = contract.create_timeline("owner control", PURPOSE)
@@ -288,6 +292,61 @@ def test_supported_receipt_metadata_is_consensus_bound(direct_vm, direct_deploy)
     receipt = contract.get_relation_receipt(relation_id)
     assert receipt["left_support_count"] == 1
     assert receipt["right_support_count"] == 1
+
+
+def test_validator_rejects_relation_disagreement(direct_vm, direct_deploy):
+    contract, timeline_id, event_ids = deploy_timeline(direct_deploy, 2)
+    contract.seal_timeline(timeline_id)
+    mock_sources(direct_vm, 2)
+    mock_relation(direct_vm, "BEFORE")
+    contract.resolve_relation(timeline_id, event_ids[0], event_ids[1])
+    assert direct_vm.run_validator(leader_result=relation_result("AFTER")) is False
+
+
+def test_validator_rejects_time_kind_disagreement(direct_vm, direct_deploy):
+    contract, timeline_id, event_ids = deploy_timeline(direct_deploy, 2)
+    contract.seal_timeline(timeline_id)
+    mock_sources(direct_vm, 2)
+    mock_relation(direct_vm, "BEFORE", "PUBLICATION_TIME", "EVENT_TIME")
+    contract.resolve_relation(timeline_id, event_ids[0], event_ids[1])
+    assert direct_vm.run_validator(leader_result=relation_result("BEFORE", "EVENT_TIME", "EVENT_TIME")) is False
+
+
+def test_validator_rejects_availability_disagreement(direct_vm, direct_deploy):
+    contract, timeline_id, event_ids = deploy_timeline(direct_deploy, 2)
+    contract.seal_timeline(timeline_id)
+    direct_vm.mock_web(r"source1\.example/evidence", {"status": 503, "body": "down"})
+    direct_vm.mock_web(r"source2\.example/evidence", {"status": 200, "body": "event"})
+    mock_relation(direct_vm, "BEFORE")
+    contract.resolve_relation(timeline_id, event_ids[0], event_ids[1])
+    assert direct_vm.run_validator(leader_result=relation_result("BEFORE", left_available=1, right_available=1)) is False
+
+
+def test_validator_rejects_support_count_disagreement(direct_vm, direct_deploy):
+    contract = direct_deploy("contracts/chronicle.py")
+    timeline_id = contract.create_timeline("support", PURPOSE)
+    first = contract.add_event(timeline_id, "A", "event A", sources("https://source1.example/evidence", "https://source2.example/evidence"))
+    second = contract.add_event(timeline_id, "B", "event B", sources("https://source1.example/evidence", "https://source2.example/evidence"))
+    contract.seal_timeline(timeline_id)
+    mock_sources(direct_vm, 2)
+    mock_relation(direct_vm, "BEFORE")
+    contract.resolve_relation(timeline_id, first, second)
+    direct_vm._llm_mocks.clear()
+    direct_vm.mock_llm(r"resolving the temporal relationship", relation_result("BEFORE", left_support=1, right_support=1))
+    assert direct_vm.run_validator(leader_result=relation_result("BEFORE", left_available=2, right_available=2, left_support=2, right_support=2)) is False
+
+
+def test_evidence_conflict_is_retryable(direct_vm, direct_deploy):
+    contract, timeline_id, event_ids = deploy_timeline(direct_deploy, 2)
+    contract.seal_timeline(timeline_id)
+    mock_sources(direct_vm, 2)
+    mock_relation(direct_vm, "EVIDENCE_CONFLICT")
+    relation_id = contract.resolve_relation(timeline_id, event_ids[0], event_ids[1])
+    receipt = contract.get_relation_receipt(relation_id)
+    assert receipt["effective_relation_name"] == "EVIDENCE_CONFLICT"
+    assert receipt["graph_applied"] is False
+    assert receipt["finalized"] is False
+    assert contract.is_pair_finalized(timeline_id, event_ids[0], event_ids[1]) is False
 
 
 def test_unavailable_evidence_does_not_finalize_pair(direct_vm, direct_deploy):

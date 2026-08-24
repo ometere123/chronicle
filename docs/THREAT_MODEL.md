@@ -50,6 +50,13 @@ Chronicle does not custody funds. Its security asset is the integrity of shared 
 
 Source URLs are frozen but public pages themselves can change. Once a pair reaches a conclusive consensus result, Chronicle makes that pair final to protect downstream consumers from mutable-web rewrites. A later evidence universe should be represented as a new event/timeline version rather than silently rewriting history.
 
+Source selection can bias the result, and semantic consensus is not objective
+truth. Timelines are intentionally bounded to 16 events; larger chronologies
+should be partitioned into linked timelines by a consumer.
+
 ## Non-goals
 
-Chronicle does not claim to prove cryptographic authenticity of arbitrary pages, access private/authenticated evidence, resolve vague event identity, transfer funds, or decide downstream policy. Those responsibilities belong in composable consumer contracts.
+Chronicle does not claim to prove cryptographic authenticity of arbitrary pages,
+defeat runtime DNS/egress policy, access private/authenticated evidence, resolve
+vague event identity, transfer funds, or decide downstream policy. Those
+responsibilities belong in composable consumer contracts.

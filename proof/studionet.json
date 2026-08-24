@@ -8,10 +8,11 @@
   "deployment_status": "FINALIZED_SUCCESS",
   "timeline_id": 1,
   "timeline_hash": "b515c110bb1ec6754c9ec218293d4c12782d99dcbd2d15d978cd6247858c60cf",
+  "timeline": {"id": 1, "name": "ChronologyProof", "purpose": "official event chronology", "timeline_hash": "b515c110bb1ec6754c9ec218293d4c12782d99dcbd2d15d978cd6247858c60cf"},
   "events": {
-    "A": {"id": 1, "label": "PerseveranceLanding", "definition_hash": "0d0a5aa22f13d445e7ce19105a093f3d41fe64039c19867fde71f46b53b8d805", "sources": ["https://mars.nasa.gov/mars2020/mission/status/"]},
-    "B": {"id": 2, "label": "WebbLaunch", "definition_hash": "69f65617ec5a5948200e8c835ecaf23585c0230e255b12a458730da1315eb441", "sources": ["https://science.nasa.gov/mission/webb/"]},
-    "C": {"id": 3, "label": "ArtemisILaunch", "definition_hash": "58f6b08e94dbc4d53bc5a83c18dd76a833d72cd83c00a046dad1fcd897c475a5", "sources": ["https://www.nasa.gov/mission/artemis-i/"]}
+    "A": {"id": 1, "label": "PerseveranceLanding", "definition": "NASA Perseverance rover landed on Mars on February 18, 2021.", "definition_hash": "0d0a5aa22f13d445e7ce19105a093f3d41fe64039c19867fde71f46b53b8d805", "sources": ["https://mars.nasa.gov/mars2020/mission/status/"]},
+    "B": {"id": 2, "label": "WebbLaunch", "definition": "NASA James Webb Space Telescope launched on December 25, 2021.", "definition_hash": "69f65617ec5a5948200e8c835ecaf23585c0230e255b12a458730da1315eb441", "sources": ["https://science.nasa.gov/mission/webb/"]},
+    "C": {"id": 3, "label": "ArtemisILaunch", "definition": "NASA Artemis I launched on November 16, 2022.", "definition_hash": "58f6b08e94dbc4d53bc5a83c18dd76a833d72cd83c00a046dad1fcd897c475a5", "sources": ["https://www.nasa.gov/mission/artemis-i/"]}
   },
   "transactions": {
     "create_timeline": "0x0e4543deef4b6f5429a97622f497e3b229ee23212d464528b7f606fe71884c13",
@@ -22,6 +23,7 @@
     "resolve_ab": "0xe741ec4014e3ac6379997cf2232f98388cd66ea914424e0e28a1d010ca3cbca2",
     "resolve_bc": "0x2a7c2392a222618dc31721ea368ee970a71c99a037bde1ad50a8dc0963df0a98"
   },
+  "transaction_statuses": {"deployment": "FINALIZED_SUCCESS", "resolve_ab": "FINALIZED_SUCCESS", "resolve_bc": "FINALIZED_SUCCESS"},
   "relations": {
     "A_B": {"relation": "BEFORE", "source": "DIRECT", "relation_id": 1, "graph_finalized": true, "direct_finalized": true},
     "B_C": {"relation": "BEFORE", "source": "DIRECT", "relation_id": 2, "graph_finalized": true, "direct_finalized": true},
@@ -31,5 +33,6 @@
   "before_path_A_C": [1, 2, 3],
   "is_before_A_C": true,
   "resolved_A_C": false,
+  "latest_attempt_id_A_C": 0,
   "proof_created_at": "2026-08-24"
 }

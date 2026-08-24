@@ -11,12 +11,15 @@ There is **no frontend and no backend**. Chronicle is intentionally a contract p
 Source commit `f294ebf2934140d4e7718e8712097db62818ddf0` is deployed at
 `0xa225F86B51ECE63b2d41A8856C33b6366cA1f344`. Deployment transaction:
 `0x378c703e73afa88f991ad3ecd209d5da039f6a92cc96e9182538abb3fdc84cf4`.
-Direct Mode behavioral coverage is **42 passed**.
+Direct Mode behavioral coverage is **35 passed** (`pytest -q tests/test_chronicle.py`).
 
 The live proof establishes `A BEFORE B` and `B BEFORE C` as direct consensus
 relations, then returns `A BEFORE C` and `C AFTER A` by deterministic inference,
 with path `[1, 2, 3]` and no A/C semantic resolution. See
 [proof/studionet.json](proof/studionet.json).
+
+Run `python scripts/verify_proof.py` to independently recompute the sealed
+timeline and event hashes.
 
 ```text
 A < B

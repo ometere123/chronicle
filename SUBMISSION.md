@@ -82,7 +82,11 @@ Potential consumers include insurance, governance, SLA enforcement, supply chain
 
 ## Testing
 
-The repository includes GenLayer Direct Mode coverage plus dependency-free preflight/static checks. The current behavioral suite has 42 passing tests, including retry lifecycles, prompt-injection-like source text, four-node cycles, overlap-vs-order conflicts, unavailable evidence, immutable definitions and receipt hash pinning.
+The repository includes GenLayer Direct Mode coverage plus dependency-free preflight/static checks. The current behavioral suite has 35 passing tests, including validator disagreement, retry lifecycles, prompt-injection-like source text, four-node cycles, overlap-vs-order conflicts, unavailable evidence, immutable definitions and receipt hash pinning.
+
+The injected-source test verifies structural delimiting of fetched text as
+untrusted evidence and independent re-observation; it does not claim perfect
+immunity of arbitrary language models to prompt injection.
 
 ## Category fit
 
@@ -99,6 +103,10 @@ Final verified StudioNet deployment:
 - status: FINALIZED / SUCCESS.
 
 The machine-readable lifecycle is in `proof/studionet.json`.
+
+Verification evidence is in `proof/verification.json`; `scripts/verify_proof.py`
+recomputes the event and timeline hashes locally. The A/C `relation_id` is zero
+in the on-chain view, confirming no direct A/C attempt existed before inference.
 
 ## Reviewer test plan
 

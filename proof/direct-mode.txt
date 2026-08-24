@@ -1,0 +1,5 @@
+Direct Mode final summary
+
+Command: gltest tests/test_chronicle.py -q
+Collected: 35
+Result: 35 passed in 2.55s
