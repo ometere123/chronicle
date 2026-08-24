@@ -163,6 +163,8 @@ def test_relation_view_inverts_orientation(direct_vm, direct_deploy):
     assert forward["relation_name"] == "BEFORE"
     assert reverse["relation_name"] == "AFTER"
     assert forward["source"] == "DIRECT"
+    assert forward["direct_finalized"] is True
+    assert forward["graph_finalized"] is True
 
 
 def test_transitive_order_is_inferred_without_another_resolution(direct_vm, direct_deploy):
@@ -175,6 +177,9 @@ def test_transitive_order_is_inferred_without_another_resolution(direct_vm, dire
     inferred = contract.get_relation(timeline_id, event_ids[0], event_ids[2])
     assert inferred["relation_name"] == "BEFORE"
     assert inferred["source"] == "INFERRED"
+    assert inferred["graph_finalized"] is True
+    assert inferred["direct_finalized"] is False
+    assert inferred["direct_relation_name"] == "UNRESOLVED"
     assert contract.get_before_path(timeline_id, event_ids[0], event_ids[2]) == event_ids
 
 
@@ -258,6 +263,17 @@ def test_canonical_relation_safely_bounds_invalid_support_and_unknown_time(direc
     assert receipt["effective_relation_name"] == "UNRESOLVED"
     assert receipt["left_support_count"] == 1
     assert receipt["right_support_count"] == 0
+
+
+def test_supported_receipt_metadata_is_consensus_bound(direct_vm, direct_deploy):
+    contract, timeline_id, event_ids = deploy_timeline(direct_deploy, 2)
+    contract.seal_timeline(timeline_id)
+    mock_sources(direct_vm, 2)
+    mock_relation(direct_vm, "BEFORE")
+    relation_id = contract.resolve_relation(timeline_id, event_ids[0], event_ids[1])
+    receipt = contract.get_relation_receipt(relation_id)
+    assert receipt["left_support_count"] == 1
+    assert receipt["right_support_count"] == 1
 
 
 def test_unavailable_evidence_does_not_finalize_pair(direct_vm, direct_deploy):

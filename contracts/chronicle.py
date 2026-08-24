@@ -97,6 +97,7 @@ class IChronicle:
         def get_relation(self, timeline_id: u256, event_a: u256, event_b: u256) -> dict: ...
         def get_relation_receipt(self, relation_id: u256) -> dict: ...
         def is_before(self, timeline_id: u256, event_a: u256, event_b: u256) -> bool: ...
+        def get_before_path(self, timeline_id: u256, event_a: u256, event_b: u256) -> list[int]: ...
         def is_pair_finalized(self, timeline_id: u256, event_a: u256, event_b: u256) -> bool: ...
 
     class Write:
@@ -696,6 +697,10 @@ class Chronicle(gl.Contract):
                 if int(leader["right_available_sources"]) != int(follower["right_available_sources"]):
                     return False
                 if is_semantically_final_relation(int(leader["relation"])):
+                    if int(leader["left_support_count"]) != int(follower["left_support_count"]):
+                        return False
+                    if int(leader["right_support_count"]) != int(follower["right_support_count"]):
+                        return False
                     if int(leader["left_support_count"]) < 1 or int(leader["right_support_count"]) < 1:
                         return False
                     if int(follower["left_support_count"]) < 1 or int(follower["right_support_count"]) < 1:
@@ -814,7 +819,7 @@ class Chronicle(gl.Contract):
         if int(event_a_obj.timeline_id) != int(timeline_id) or int(event_b_obj.timeline_id) != int(timeline_id):
             raise gl.vm.UserError(f"{ERR_EXPECTED}: both events must belong to the timeline")
         if int(event_a) == int(event_b):
-            return {"relation":REL_SAME_WINDOW,"relation_name":"SAME_EVENT","source":"IDENTITY","relation_id":0,"finalized":True,"graph_relation":REL_SAME_WINDOW,"graph_relation_name":"SAME_EVENT","direct_relation":REL_SAME_WINDOW,"direct_relation_name":"SAME_EVENT","has_conflict":False}
+            return {"relation":REL_SAME_WINDOW,"relation_name":"SAME_EVENT","source":"IDENTITY","relation_id":0,"finalized":True,"graph_relation":REL_SAME_WINDOW,"graph_relation_name":"SAME_EVENT","graph_finalized":True,"direct_relation":REL_SAME_WINDOW,"direct_relation_name":"SAME_EVENT","direct_finalized":True,"has_conflict":False}
         pair_key = self._pair_key(timeline_id, event_a, event_b)
         latest_id = self.pair_latest.get(pair_key)
         if latest_id is None:
@@ -829,12 +834,12 @@ class Chronicle(gl.Contract):
                 direct_relation_name = relation_name(direct_relation)
                 direct_finalized = bool(receipt.finalized)
         if self._has_before_path_id(timeline_id, timeline, event_a, event_b):
-            return {"relation":REL_BEFORE,"relation_name":"BEFORE","source":"DIRECT" if direct_finalized and direct_relation == REL_BEFORE else "INFERRED","relation_id":int(latest_id),"finalized":direct_finalized,"graph_relation":REL_BEFORE,"graph_relation_name":"BEFORE","direct_relation":direct_relation,"direct_relation_name":direct_relation_name,"has_conflict":direct_relation == REL_GRAPH_CONFLICT}
+            return {"relation":REL_BEFORE,"relation_name":"BEFORE","source":"DIRECT" if direct_finalized and direct_relation == REL_BEFORE else "INFERRED","relation_id":int(latest_id),"finalized":direct_finalized,"graph_relation":REL_BEFORE,"graph_relation_name":"BEFORE","graph_finalized":True,"direct_relation":direct_relation,"direct_relation_name":direct_relation_name,"direct_finalized":direct_finalized,"has_conflict":direct_relation == REL_GRAPH_CONFLICT}
         if self._has_before_path_id(timeline_id, timeline, event_b, event_a):
-            return {"relation":REL_AFTER,"relation_name":"AFTER","source":"DIRECT" if direct_finalized and direct_relation == REL_AFTER else "INFERRED","relation_id":int(latest_id),"finalized":direct_finalized,"graph_relation":REL_AFTER,"graph_relation_name":"AFTER","direct_relation":direct_relation,"direct_relation_name":direct_relation_name,"has_conflict":direct_relation == REL_GRAPH_CONFLICT}
+            return {"relation":REL_AFTER,"relation_name":"AFTER","source":"DIRECT" if direct_finalized and direct_relation == REL_AFTER else "INFERRED","relation_id":int(latest_id),"finalized":direct_finalized,"graph_relation":REL_AFTER,"graph_relation_name":"AFTER","graph_finalized":True,"direct_relation":direct_relation,"direct_relation_name":direct_relation_name,"direct_finalized":direct_finalized,"has_conflict":direct_relation == REL_GRAPH_CONFLICT}
         if int(latest_id) != 0:
-            return {"relation":direct_relation,"relation_name":direct_relation_name,"source":"DIRECT" if direct_finalized else "LATEST_ATTEMPT","relation_id":int(latest_id),"finalized":direct_finalized,"graph_relation":REL_UNRESOLVED,"graph_relation_name":"UNRESOLVED","direct_relation":direct_relation,"direct_relation_name":direct_relation_name,"has_conflict":direct_relation == REL_GRAPH_CONFLICT}
-        return {"relation":REL_UNRESOLVED,"relation_name":"UNRESOLVED","source":"NONE","relation_id":0,"finalized":False,"graph_relation":REL_UNRESOLVED,"graph_relation_name":"UNRESOLVED","direct_relation":REL_UNRESOLVED,"direct_relation_name":"UNRESOLVED","has_conflict":False}
+            return {"relation":direct_relation,"relation_name":direct_relation_name,"source":"DIRECT" if direct_finalized else "LATEST_ATTEMPT","relation_id":int(latest_id),"finalized":direct_finalized,"graph_relation":REL_UNRESOLVED,"graph_relation_name":"UNRESOLVED","graph_finalized":False,"direct_relation":direct_relation,"direct_relation_name":direct_relation_name,"direct_finalized":direct_finalized,"has_conflict":direct_relation == REL_GRAPH_CONFLICT}
+        return {"relation":REL_UNRESOLVED,"relation_name":"UNRESOLVED","source":"NONE","relation_id":0,"finalized":False,"graph_relation":REL_UNRESOLVED,"graph_relation_name":"UNRESOLVED","graph_finalized":False,"direct_relation":REL_UNRESOLVED,"direct_relation_name":"UNRESOLVED","direct_finalized":False,"has_conflict":False}
 
     @gl.public.view
     def is_before(self, timeline_id: u256, event_a: u256, event_b: u256) -> bool:
